@@ -50,14 +50,19 @@ export const verifyOtp = async (req, res) => {
     user.isVerified = true;
     await user.save();
 
-    const verifiedToken = jwt.sign({ mobileNumber }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    // Create a new token valid for further actions (optional)
+    const verifiedToken = jwt.sign({ mobileNumber, userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-    res.status(200).json({ success: true, message: "OTP verified", token: verifiedToken });
+    res.status(200).json({ 
+      success: true, 
+      message: "OTP verified", 
+      token: verifiedToken,
+      userId: user._id  // ✅ send userId here
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
 // GET all users
 export const getAllUsers = async (req, res) => {
   try {
@@ -88,21 +93,13 @@ export const getUserById = async (req, res) => {
 
 
 export const saveLocation = async (req, res) => {
-  try {
-    const { token, latitude, longitude } = req.body;
-    if (!token || latitude === undefined || longitude === undefined) {
-      return res.status(400).json({ success: false, message: "Token, latitude and longitude required" });
+   try {
+    const { userId, latitude, longitude } = req.body;
+    if (!userId || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ success: false, message: "userId, latitude and longitude required" });
     }
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({ success: false, message: "Invalid or expired token" });
-    }
-
-    const { mobileNumber } = decoded;
-    const user = await User.findOne({ mobileNumber });
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     user.location = { type: "Point", coordinates: [longitude, latitude] };
@@ -115,35 +112,34 @@ export const saveLocation = async (req, res) => {
 };
 // GET location by userId
 export const getLocationById = async (req, res) => {
-  try {
+ try {
     const { userId } = req.params;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     res.status(200).json({ success: true, location: user.location || null });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error", error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // UPDATE location by userId
 export const updateLocationById = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { latitude, longitude } = req.body;
+    const { userId, latitude, longitude } = req.body;
 
-    if (latitude === undefined || longitude === undefined)
-      return res.status(400).json({ success: false, message: "Latitude and longitude required" });
+    if (!userId || latitude === undefined || longitude === undefined)
+      return res.status(400).json({ success: false, message: "userId, latitude and longitude required" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    user.location = { latitude, longitude, updatedAt: new Date() };
+    user.location = { type: "Point", coordinates: [longitude, latitude], updatedAt: new Date() };
     await user.save();
 
     res.status(200).json({ success: true, message: "Location updated", location: user.location });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error", error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -159,7 +155,7 @@ export const deleteLocationById = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Location deleted successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error", error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
