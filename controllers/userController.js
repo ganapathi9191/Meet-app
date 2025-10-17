@@ -89,72 +89,104 @@ export const getUserById = async (req, res) => {
 
 
 
-
-//-------------------- Save live location-------------------------------
-
-
+//-------------------- Save live location -------------------------------
 export const saveLocation = async (req, res) => {
-   try {
-    const { userId, latitude, longitude } = req.body;
+  try {
+    const { latitude, longitude } = req.body;
+    const { userId } = req.params;
+
     if (!userId || latitude === undefined || longitude === undefined) {
-      return res.status(400).json({ success: false, message: "userId, latitude and longitude required" });
+      return res.status(400).json({
+        success: false,
+        message: "userId (in params), latitude, and longitude (in body) are required",
+      });
     }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
 
     user.location = { type: "Point", coordinates: [longitude, latitude] };
     await user.save();
 
-    res.status(200).json({ success: true, message: "Location saved", location: user.location });
+    res.status(200).json({
+      success: true,
+      message: "Location saved successfully",
+      location: user.location,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-// GET location by userId
+
+//-------------------- Get location by userId -------------------------------
 export const getLocationById = async (req, res) => {
- try {
+  try {
     const { userId } = req.params;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    res.status(200).json({ success: true, location: user.location || null });
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.status(200).json({
+      success: true,
+      location: user.location || null,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// UPDATE location by userId
+//-------------------- Update location by userId -------------------------------
 export const updateLocationById = async (req, res) => {
   try {
-    const { userId, latitude, longitude } = req.body;
+    const { latitude, longitude } = req.body;
+    const { userId } = req.params;
 
-    if (!userId || latitude === undefined || longitude === undefined)
-      return res.status(400).json({ success: false, message: "userId, latitude and longitude required" });
+    if (!userId || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "userId (in params), latitude and longitude (in body) are required",
+      });
+    }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
 
-    user.location = { type: "Point", coordinates: [longitude, latitude], updatedAt: new Date() };
+    user.location = {
+      type: "Point",
+      coordinates: [longitude, latitude],
+      updatedAt: new Date(),
+    };
     await user.save();
 
-    res.status(200).json({ success: true, message: "Location updated", location: user.location });
+    res.status(200).json({
+      success: true,
+      message: "Location updated successfully",
+      location: user.location,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// DELETE location by userId
+//-------------------- Delete location by userId -------------------------------
 export const deleteLocationById = async (req, res) => {
   try {
     const { userId } = req.params;
+
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
 
     user.location = undefined;
     await user.save();
 
-    res.status(200).json({ success: true, message: "Location deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Location deleted successfully",
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -164,9 +196,6 @@ export const deleteLocationById = async (req, res) => {
 
 
 
-
-
-//-----------------------personal info-----------------------
 
 
 // -------------------- Personal Info --------------------
@@ -279,9 +308,10 @@ export const deletePersonalInfoById = async (req, res) => {
 // ✅ Create Address
 export const createAddress = async (req, res) => {
   try {
-    const { userId, street, city, state, country, postalCode, addressType, lat, lng, fullAddress } = req.body;
+    const { userId } = req.params;
+    const {street, city, state, country, postalCode, addressType, lat, lng, fullAddress } = req.body;
 
-    if (!userId || !street || !city || !state || !country || !postalCode || !addressType) {
+    if (!street || !city || !state || !country || !postalCode || !addressType) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 

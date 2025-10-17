@@ -16,4 +16,6 @@ router.delete("/delete-vendor/:id", vendor.deleteVendorById);
 router.put("/update-working-status/:id", vendor.updateWorkingStatus);
 
 
+router.get("/shallers-by-category", vendor.getShallersByCategory);
+
 export default router;

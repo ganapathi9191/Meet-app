@@ -311,3 +311,84 @@ export const updateWorkingStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+// ==================== GET ALL SHALLERS BY CATEGORY ====================
+export const getShallersByCategory = async (req, res) => {
+  try {
+    // Fetch all vendors who have shaller data
+    const vendors = await VendorLogin.find({ shaller: { $exists: true, $ne: null } });
+
+    // Initialize category arrays
+    const bestShallers = [];
+    const recommendedShallers = [];
+    const peopleMoreLike = [];
+
+    vendors.forEach(vendor => {
+      const shop = vendor.shaller;
+
+      if (!shop || !shop.shopName) return;
+
+      const rating = shop.rating || 0;
+      const review = shop.review || 0;
+
+      // 🏆 Best Shallers: Rating between 4.6 - 5.0
+      if (rating >= 4.6 && rating <= 5.0) {
+        bestShallers.push({
+          vendorId: vendor._id,
+          shopName: shop.shopName,
+          rating,
+          review,
+          category: "Best Shaller",
+          image: shop.image,
+          workingstatus: shop.workingstatus
+        });
+      }
+
+      // ⭐ Recommended Shallers: Rating between 4.1 - 4.5
+      if (rating >= 4.1 && rating <= 4.5) {
+        recommendedShallers.push({
+          vendorId: vendor._id,
+          shopName: shop.shopName,
+          rating,
+          review,
+          category: "Recommended Shaller",
+          image: shop.image,
+          workingstatus: shop.workingstatus
+        });
+      }
+
+      // ❤️ People More Like Shallers: Review > 90
+      if (review > 90) {
+        peopleMoreLike.push({
+          vendorId: vendor._id,
+          shopName: shop.shopName,
+          rating,
+          review,
+          category: "People More Like",
+          image: shop.image,
+          workingstatus: shop.workingstatus
+        });
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Shallers fetched successfully",
+      totalVendors: vendors.length,
+      data: {
+        bestShallers,
+        recommendedShallers,
+        peopleMoreLike
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in getShallersByCategory:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};

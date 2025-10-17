@@ -27,14 +27,14 @@ router.get("/personal-info/:id", User.getPersonalInfoById); // ✅ correct
 router.put("/personal-info/:id", upload.single("image"), User.updatePersonalInfoById); // ✅ add update
 router.delete("/personal-info/:id", User.deletePersonalInfoById); // ✅ correct
 // Live location routes (specific first)
-router.post("/user-location/save", User.saveLocation);
+router.post("/user-location/save/:userId", User.saveLocation);
 router.get("/user-location/:userId", User.getLocationById);
 router.put("/user-location/:userId", User.updateLocationById);
 router.delete("/user-location/:userId", User.deleteLocationById);
 
 
 // Create address
-router.post("/create-address", User.createAddress);
+router.post("/create-address/:userId", User.createAddress);
 router.get("/getall-address/:userId", User.getAllAddresses);
 router.get("/get-address/:userId/:addressId", User.getAddressById);
 router.put("/update-address/:userId/:addressId", User.updateAddressById);
