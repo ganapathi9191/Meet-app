@@ -33,6 +33,15 @@ router.put("/user-location/:userId", User.updateLocationById);
 router.delete("/user-location/:userId", User.deleteLocationById);
 
 
+// Create address
+router.post("/create-address", User.createAddress);
+router.get("/getall-address/:userId", User.getAllAddresses);
+router.get("/get-address/:userId/:addressId", User.getAddressById);
+router.put("/update-address/:userId/:addressId", User.updateAddressById);
+router.delete("/delete-address/:userId/:addressId", User.deleteAddressById);
+
+
+
 // Example protected route
 router.get("/profile", verifyToken, (req, res) => {
   res.json({ success: true, message: "Protected route", user: req.user });

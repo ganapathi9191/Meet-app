@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/userModel.js";
 import cloudinary from "../config/cloudinary.js";
+import mongoose from "mongoose";
 
 
 const OTP_CODE = "1234";
@@ -271,5 +272,124 @@ export const deletePersonalInfoById = async (req, res) => {
     res.status(200).json({ success: true, message: "Personal info deleted" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+// ✅ Create Address
+export const createAddress = async (req, res) => {
+  try {
+    const { userId, street, city, state, country, postalCode, addressType, lat, lng, fullAddress } = req.body;
+
+    if (!userId || !street || !city || !state || !country || !postalCode || !addressType) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const newAddress = {
+      _id: new mongoose.Types.ObjectId(),
+      street,
+      city,
+      state,
+      country,
+      postalCode,
+      addressType,
+      lat,
+      lng,
+      fullAddress
+    };
+
+    user.addresses.push(newAddress);
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Address added successfully",
+      address: newAddress
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error creating address", error: error.message });
+  }
+};
+
+// ✅ Get All Addresses of a User
+export const getAllAddresses = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    res.status(200).json({
+      success: true,
+      totalAddresses: user.addresses.length,
+      addresses: user.addresses
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching addresses", error: error.message });
+  }
+};
+
+// ✅ Get Address by ID
+export const getAddressById = async (req, res) => {
+  try {
+    const { userId, addressId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const address = user.addresses.id(addressId);
+    if (!address) return res.status(404).json({ success: false, message: "Address not found" });
+
+    res.status(200).json({ success: true, address });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching address", error: error.message });
+  }
+};
+
+// ✅ Update Address by ID
+export const updateAddressById = async (req, res) => {
+  try {
+    const { userId, addressId } = req.params;
+    const updateData = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const address = user.addresses.id(addressId);
+    if (!address) return res.status(404).json({ success: false, message: "Address not found" });
+
+    Object.assign(address, updateData);
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated successfully",
+      address
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error updating address", error: error.message });
+  }
+};
+
+// ✅ Delete Address by ID
+export const deleteAddressById = async (req, res) => {
+  try {
+    const { userId, addressId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const address = user.addresses.id(addressId);
+    if (!address) return res.status(404).json({ success: false, message: "Address not found" });
+
+    address.remove();
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Address deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error deleting address", error: error.message });
   }
 };

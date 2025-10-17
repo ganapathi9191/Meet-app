@@ -7,7 +7,12 @@ const shallerSchema = new mongoose.Schema({
   description: { type: String },
   rating: { type: Number, default: 0 },
   review: { type: Number, default: 0 },
-  image: { type: String }, // Cloudinary image URL
+  // ✅ Changed workingstatus to enum
+  workingstatus: {
+    type: String,
+    enum: ["OPEN", "CLOSED"],
+    default: "OPEN"
+  },  image: { type: String }, // Cloudinary image URL
   location: {
     type: { type: String, enum: ["Point"], default: "Point" },
     coordinates: { type: [Number], default: [0, 0] } // [longitude, latitude]

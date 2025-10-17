@@ -37,8 +37,6 @@ export const vendorLogin = async (req, res) => {
 // Create vendor shaller shop
 export const createVendorWithShaller = async (req, res) => {
   try {
-    
-
     // Extract all fields from form-data and clean them
     let vendorId = req.body.vendorId;
     let shopName = req.body.shopName;
@@ -46,43 +44,44 @@ export const createVendorWithShaller = async (req, res) => {
     let description = req.body.description;
     let rating = req.body.rating;
     let review = req.body.review;
+    let workingstatus = req.body.workingstatus;
     let coordinates = req.body.coordinates;
 
-    // Clean all string fields by removing quotes
+    // Clean all string fields
     if (vendorId) vendorId = vendorId.replace(/^["']|["']$/g, '').trim();
     if (shopName) shopName = shopName.replace(/^["']|["']$/g, '').trim();
     if (address) address = address.replace(/^["']|["']$/g, '').trim();
     if (description) description = description.replace(/^["']|["']$/g, '').trim();
+    if (workingstatus) workingstatus = workingstatus.replace(/^["']|["']$/g, '').trim();
     if (coordinates) coordinates = coordinates.replace(/^["']|["']$/g, '').trim();
-
 
     // Validate required fields
     if (!vendorId || !shopName || !address) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         message: "Vendor ID, shop name and address are required",
-        received: { vendorId, shopName, address }
+        received: { vendorId, shopName, address, workingstatus }
       });
     }
 
-    // Check if vendor exists
+    // Check vendor existence
     const vendor = await VendorLogin.findById(vendorId);
     if (!vendor) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: "Vendor not found with ID: " + vendorId
       });
     }
 
-    // Check if shop already exists for this vendor
+    // Prevent duplicate shop creation
     if (vendor.shaller && vendor.shaller.shopName) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Shop already exists for this vendor" 
+      return res.status(400).json({
+        success: false,
+        message: "Shop already exists for this vendor"
       });
     }
 
-    // Upload image to Cloudinary if file exists
+    // Upload image to Cloudinary
     let imageUrl = "";
     if (req.file) {
       try {
@@ -92,18 +91,17 @@ export const createVendorWithShaller = async (req, res) => {
         imageUrl = uploaded.secure_url;
       } catch (uploadError) {
         console.error("Cloudinary upload error:", uploadError);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Image upload failed" 
+        return res.status(500).json({
+          success: false,
+          message: "Image upload failed"
         });
       }
     }
 
-    // Parse coordinates if they are string
+    // Parse coordinates
     let parsedCoordinates = [0, 0];
     if (coordinates) {
       try {
-        // Remove brackets and quotes, then split by comma
         const coordString = coordinates.replace(/[\[\]"']/g, '');
         parsedCoordinates = coordString.split(',').map(coord => parseFloat(coord.trim()));
       } catch (error) {
@@ -119,6 +117,7 @@ export const createVendorWithShaller = async (req, res) => {
       description: description || "",
       rating: rating ? parseFloat(rating.replace(/["']/g, '')) : 0,
       review: review ? parseInt(review.replace(/["']/g, '')) : 0,
+      workingstatus: workingstatus || "OPEN", // ✅ Added workingstatus here
       image: imageUrl,
       location: {
         type: "Point",
@@ -127,14 +126,14 @@ export const createVendorWithShaller = async (req, res) => {
       vendorId: vendorId
     };
 
-    // Update vendor with shaller data
+    // Save shaller data
     vendor.shaller = shallerData;
     vendor.isProfileComplete = true;
     await vendor.save();
 
-    res.status(201).json({ 
-      success: true, 
-      message: "Shop details created successfully", 
+    res.status(201).json({
+      success: true,
+      message: "Shop details created successfully",
       data: {
         vendor: {
           id: vendor._id,
@@ -148,8 +147,8 @@ export const createVendorWithShaller = async (req, res) => {
 
   } catch (error) {
     console.error("Error in createVendorWithShaller:", error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: error.message,
       stack: error.stack
     });
@@ -159,8 +158,7 @@ export const createVendorWithShaller = async (req, res) => {
 // ==================== GET ALL VENDORS ====================
 export const getAllVendors = async (req, res) => {
   try {
-    const vendors = await VendorLogin.find().select("-password"); // Hide password for security
-
+    const vendors = await VendorLogin.find().select("-password");
     if (!vendors || vendors.length === 0) {
       return res.status(404).json({ success: false, message: "No vendors found" });
     }
@@ -180,7 +178,6 @@ export const getAllVendors = async (req, res) => {
 export const getVendorById = async (req, res) => {
   try {
     const { id } = req.params;
-
     const vendor = await VendorLogin.findById(id).select("-password");
     if (!vendor) {
       return res.status(404).json({ success: false, message: "Vendor not found with ID: " + id });
@@ -212,10 +209,10 @@ export const updateVendorById = async (req, res) => {
       description,
       rating,
       review,
+      workingstatus,
       coordinates
     } = req.body;
 
-    // Update shaller details only if exists
     if (!vendor.shaller) vendor.shaller = {};
 
     if (shopName) vendor.shaller.shopName = shopName;
@@ -223,7 +220,7 @@ export const updateVendorById = async (req, res) => {
     if (description) vendor.shaller.description = description;
     if (rating) vendor.shaller.rating = parseFloat(rating);
     if (review) vendor.shaller.review = parseInt(review);
-
+    if (workingstatus) vendor.shaller.workingstatus = workingstatus; // ✅ Added here
     if (coordinates) {
       try {
         const coordString = coordinates.replace(/[\[\]"']/g, '');
@@ -236,7 +233,6 @@ export const updateVendorById = async (req, res) => {
       }
     }
 
-    // If new image file provided, upload to Cloudinary
     if (req.file) {
       const uploaded = await cloudinary.uploader.upload(req.file.path, {
         folder: "vendor_shaller_images"
@@ -262,20 +258,56 @@ export const updateVendorById = async (req, res) => {
 export const deleteVendorById = async (req, res) => {
   try {
     const { id } = req.params;
-
     const vendor = await VendorLogin.findById(id);
     if (!vendor) {
       return res.status(404).json({ success: false, message: "Vendor not found with ID: " + id });
     }
 
     await VendorLogin.findByIdAndDelete(id);
-
     res.status(200).json({
       success: true,
       message: "Vendor deleted successfully",
       deletedId: id
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateWorkingStatus = async (req, res) => {
+  try {
+    const { id } = req.params; // Vendor ID
+    let { workingstatus } = req.body; // Expected: "OPEN" or "CLOSED"
+
+    // Validate workingstatus
+    if (!workingstatus || !["OPEN", "CLOSED"].includes(workingstatus.toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        message: "workingstatus is required and must be either 'OPEN' or 'CLOSED'"
+      });
+    }
+
+    const vendor = await VendorLogin.findById(id);
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: "Vendor not found" });
+    }
+
+    if (!vendor.shaller) {
+      return res.status(400).json({ success: false, message: "Vendor does not have a shaller shop" });
+    }
+
+    // Update workingstatus
+    vendor.shaller.workingstatus = workingstatus.toUpperCase();
+    await vendor.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Working status updated to '${vendor.shaller.workingstatus}'`,
+      data: { vendorId: vendor._id, workingstatus: vendor.shaller.workingstatus }
+    });
+
+  } catch (error) {
+    console.error("Error updating working status:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
